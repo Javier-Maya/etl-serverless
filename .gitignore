@@ -1,0 +1,23 @@
+# Variables de entorno y credenciales
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+
+# AWS
+.aws/
+
+# Cursor
+.cursor/
+
+# macOS
+.DS_Store
+
+# Contexto local (no versionado)
+context/
