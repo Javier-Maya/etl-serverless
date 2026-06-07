@@ -68,10 +68,58 @@ type(scope): description
 - Ramas para features: `feature/nombre-descriptivo`
 
 ## Seguridad
+
+### Principios generales
 - Principio de mínimo privilegio en IAM: solo los permisos estrictamente necesarios
-- Nunca usar credenciales de root
+- Nunca usar credenciales de root para trabajo diario
+- Nunca crear access keys para el usuario root
 - Secrets en AWS Secrets Manager para producción
 - Variables de entorno para desarrollo local — nunca hardcodeadas
+- Nunca dar permisos directamente a usuarios — siempre a través de grupos o roles
+
+### iam:PassRole — acción sensible
+`iam:PassRole` permite asignar un rol a un servicio AWS. Es una acción
+crítica de seguridad porque puede usarse para escalar privilegios.
+
+**El riesgo:** si un usuario tiene PassRole sin restricciones, puede crear
+una función Lambda, asignarle un rol con más permisos de los que él tiene,
+y ejecutar esa Lambda para acceder a recursos que normalmente no podría tocar.
+Esto se llama escalación de privilegios y es difícil de detectar porque
+en los logs aparece el servicio (Lambda) como actor, no el usuario.
+
+**La solución:** siempre limitar PassRole con la condición `iam:PassedToService`:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": "iam:PassRole",
+  "Resource": "arn:aws:iam::ACCOUNT_ID:role/*",
+  "Condition": {
+    "StringEquals": {
+      "iam:PassedToService": "lambda.amazonaws.com"
+    }
+  }
+}
+```
+
+Esto limita PassRole exclusivamente al servicio Lambda — no puede usarse
+para asignar roles a EC2, RDS, ni ningún otro servicio.
+
+### Resource: "*" vs ARN específico
+- Usar ARN específico cuando la acción opera sobre un recurso concreto con nombre
+  (crear un rol, leer un archivo, modificar una función)
+- Usar `"*"` cuando la acción opera sobre toda la cuenta y no tiene recurso específico
+  (listar políticas, listar roles, listar buckets)
+- Señal de error: si pones ARN específico y AWS da acceso denegado,
+  probablemente esa acción requiere `"*"`
+- Consultar siempre la documentación de acciones IAM del servicio para confirmar
+
+### Usuarios nuevos en AWS
+- Un usuario nuevo no tiene ningún permiso por defecto — ni siquiera puede
+  ver sus propias credenciales o configurar su MFA
+- Siempre crear una política base de self-service que permita al usuario
+  gestionar sus propias credenciales y configurar su MFA
+- El MFA debe configurarlo el propio usuario desde su sesión, no el administrador
 
 ## Observabilidad
 - Todo error debe quedar loggeado con contexto suficiente para debuggear
@@ -86,20 +134,10 @@ type(scope): description
 **Tests unitarios** — prueban una función de forma aislada, sin dependencias externas.
 Son rápidos, no necesitan conexión a base de datos ni a AWS.
 Cubren la lógica de negocio: validaciones, transformaciones, cálculos.
-```
-# Ejemplo: testear que la validación detecta una columna faltante
-# No necesita S3, no necesita PostgreSQL — solo llama a la función y verifica el resultado
-test_validate_csv_missing_column_raises_error
-```
 
 **Tests de integración** — prueban que dos o más componentes funcionan juntos.
 Son más lentos, pueden requerir conexión a servicios reales o mocks de ellos.
 Cubren el flujo completo: Lambda recibe evento → lee S3 → inserta en DB.
-```
-# Ejemplo: testear que el handler completo procesa un CSV y lo inserta en DB
-# Necesita una DB de test o un mock de PostgreSQL
-test_handler_valid_csv_inserts_transactions
-```
 
 ### Regla general
 - Prioridad a tests unitarios — son más rápidos y más fáciles de mantener
