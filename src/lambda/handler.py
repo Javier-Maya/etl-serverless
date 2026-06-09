@@ -1,7 +1,3 @@
-"""
-Módulo principal de la Lambda function ETL.
-Orquesta el flujo completo: validación, transformación y carga de datos.
-"""
 import logging
 from typing import Any
 
@@ -11,11 +7,11 @@ logger.setLevel(logging.INFO)
 
 def handler(event: dict, context: Any) -> dict:
     """
-    Procesa un archivo CSV de transacciones recibido desde S3.
+    Punto de entrada de la Lambda. Recibe el evento S3 y orquesta el flujo ETL.
 
     Args:
-        event: Evento S3 con información del archivo recibido.
-        context: Contexto de ejecución Lambda (timeout, función, etc).
+        event: Evento S3 con los registros de los objetos creados.
+        context: Contexto de ejecución Lambda (timeout, memoria, etc).
 
     Returns:
         dict con statusCode 200 si el proceso fue exitoso.
@@ -24,20 +20,26 @@ def handler(event: dict, context: Any) -> dict:
         Exception: Relanza cualquier error no recuperable para que
                    Lambda lo registre en CloudWatch.
     """
-    logger.info("Inicio de ejecución", extra={"event": event})
+    logger.info("Inicio de ejecución Lambda")
 
     try:
-        # TODO: extraer bucket y key del evento S3
-        # TODO: leer CSV desde S3
-        # TODO: validar schema con csv_validator
-        # TODO: transformar datos con transformer
-        # TODO: cargar datos con db_client
-        # TODO: mover archivo a processed/ o failed/
-        pass
+        for record in event.get("Records", []):
+            bucket_name = record["s3"]["bucket"]["name"]
+            object_key = record["s3"]["object"]["key"]
+
+            logger.info(
+                "Archivo recibido desde S3",
+                extra={
+                    "bucket": bucket_name,
+                    "key": object_key,
+                }
+            )
+
+            # TODO Día 4: llamar a csv_validator, transformer, db_client
 
     except Exception as e:
         logger.error("Error en ejecución", extra={"error": str(e)})
         raise
 
-    logger.info("Fin de ejecución")
+    logger.info("Fin de ejecución Lambda")
     return {"statusCode": 200, "body": "OK"}
