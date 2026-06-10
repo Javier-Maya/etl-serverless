@@ -1,5 +1,12 @@
 # Best Practices — Estándares de Ingeniería
 
+<!--
+  QUÉ VA ACÁ: reglas de ingeniería que aplican al proyecto
+  (arquitectura, código, seguridad, testing, git, observabilidad).
+  QUÉ NO VA ACÁ: forma de trabajar con Claude, log del proyecto,
+  información personal de Javier, decisiones técnicas puntuales (esas van en ADRs).
+-->
+
 ## Principios generales
 - Código escrito para ser leído por humanos primero, por máquinas segundo
 - Los comentarios explican el WHY, no el WHAT
@@ -20,6 +27,7 @@
 - Docstrings en funciones públicas (formato Google style — ver conventions.md para ejemplos)
 - Manejo explícito de excepciones — nunca `except Exception: pass`
 - Logging estructurado en vez de print()
+- Las funciones de transformación siempre hacen df.copy() antes de modificar — nunca mutar el DataFrame de entrada
 
 ## ETL / Data
 - Validar schema antes de procesar
@@ -144,9 +152,6 @@ Cubren el flujo completo: Lambda recibe evento → lee S3 → inserta en DB.
 - Tests de integración para los flujos críticos del negocio
 - Todo código nuevo tiene al menos un test unitario antes de hacer commit
 - Un test que no puede fallar no sirve de nada
-
-### Nomenclatura
-`test_[funcion]_[escenario]_[resultado_esperado]`
 
 ## ADRs (Architecture Decision Records)
 - Toda decisión técnica importante se documenta en docs/adr/
